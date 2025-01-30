@@ -19,7 +19,7 @@ um sistema de **refresh token** seguro, com validações utilizando **bcrypt**,
 
 1. Clone o repositório:
    ```sh
-   git clone https://github.com/seu-usuario/seu-repositorio.git
+   git clone https://github.com/Williamluqui/refresh-token.git
    ```
 2. Acesse o diretório do projeto:
    ```sh
