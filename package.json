@@ -1,0 +1,29 @@
+{
+  "name": "refresh-token",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "@prisma/client": "^6.2.1",
+    "@types/bcrypt": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.7",
+    "bcrypt": "^5.1.1",
+    "concurrently": "^9.1.2",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "nodemon": "^3.1.9",
+    "yarn": "^1.22.22"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node ./dist/server.js",
+    "build:dev": "tsc -w",
+    "dev": "concurrently \"npm:build:dev\" \"npm:nodemon\"",
+    "nodemon": "nodemon ./dist/server.js"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "prisma": "^6.2.1",
+    "typescript": "^5.7.3"
+  }
+}
