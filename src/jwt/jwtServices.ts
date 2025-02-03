@@ -53,8 +53,7 @@ export async function verifyAndClearToken(token: string | undefined) {
 export async function verifyAndClearRefreshToken(token: string | undefined) {
   if (!token) throw new Error("Erro ao obter o token!");
 
-  const tokenClear = token.split("Bearer ")[1];
-  const tokenInfo = await verifyRefreshToken(tokenClear);
+  const tokenInfo = await verifyRefreshToken(token);
   return tokenInfo;
 }
 

@@ -6,8 +6,8 @@ export async function ensureRefreshToken(
   res: Response,
   next: NextFunction
 ): Promise<void> {
-  const refreshToken = req.headers.authorization;
-  const token = refreshToken?.split(" ")[1];
+  const { refreshToken } = req.body;
+
   if (!refreshToken) {
     res
       .status(401)
@@ -15,7 +15,7 @@ export async function ensureRefreshToken(
     return;
   }
   try {
-    await verifyRefreshToken(token!);
+    await verifyRefreshToken(refreshToken);
 
     next();
   } catch (error) {

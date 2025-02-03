@@ -111,7 +111,7 @@ POST /api/auth/login
 POST /api/auth/refresh
 ```
 
-**Authenticate:**
+**Body:**
 
 ```json
 {

@@ -6,7 +6,6 @@ import {
   GenerateRefreshToken,
   generateToken,
   verifyAndClearRefreshToken,
-  verifyAndClearToken,
 } from "../jwt/jwtServices";
 import { ErrorHandler } from "../errors/errorAplication";
 import { errorHandlerCatch } from "../errors/errorHandler";
@@ -26,14 +25,16 @@ interface Login {
 const SALT_HASH = 9;
 class AuthController {
   async registerUser(req: Request, res: Response, next: NextFunction) {
-    const userBody: Login = req.body;
     try {
+      const userBody: Login = req.body;
+
       if (!validateUserEmail(userBody.email))
         throw new ErrorHandler(400, "Email enviado inválido!");
       if (!validatePassword(userBody.password))
         throw new ErrorHandler(400, "O password deve conter mais de 6 caracteres!");
       if (!validateName(userBody.name))
         throw new ErrorHandler(400, "Nome não pode conter caracteres!");
+
       const authModel = new AuthModel();
 
       const user = await authModel.userAlreadyExist(userBody.email);
@@ -63,13 +64,13 @@ class AuthController {
   }
 
   async authLogin(req: Request, res: Response, next: NextFunction) {
-    const { email, password } = req.body;
     try {
+      const { email, password } = req.body;
+
       const authModel = new AuthModel();
 
       const verifyUser = await authModel.userAlreadyExist(email);
       if (!verifyUser) throw new ErrorHandler(400, "Email ou senha inválido!");
-      console.log(verifyUser);
 
       const validPassword = await Bcrypt.compare(password, verifyUser.password);
       if (!validPassword) throw new ErrorHandler(400, "Email ou senha inválido!");
@@ -83,13 +84,65 @@ class AuthController {
 
       const refreshTokenModel = new RefreshTokenModel();
 
-      
+      const removeRefreshTokenSaved =
+        await refreshTokenModel.deleteRefreshTokenUserLogged(verifyUser.id);
+      if (!removeRefreshTokenSaved)
+        throw new ErrorHandler(400, "Erro ao remover o refresh token antigo!");
+
       const refreshToken = await refreshTokenModel.saveRefreshToken(
         generateRefreshToken,
         verifyUser.id
       );
 
       if (!refreshToken)
+        throw new ErrorHandler(400, "Erro ao salvar o refresh token!");
+
+      res.status(200).json({
+        status: 200,
+        error: false,
+        message: "Usuário logado com sucesso!",
+        data: { accessToken: tokenJwt, refreshToken: generateRefreshToken },
+      });
+    } catch (error) {
+      console.log(error);
+      const { statusCode, message } = errorHandlerCatch(error);
+      next(new ErrorHandler(statusCode, message));
+    }
+  }
+
+  async refreshTokenUser(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { refreshToken } = req.body;
+
+      const refreshTokenModel = new RefreshTokenModel();
+
+      const verifyRefreshToken = await verifyAndClearRefreshToken(refreshToken);
+      if (!verifyRefreshToken)
+        throw new ErrorHandler(401, "Refresh token inválido!");
+
+      const generateRefreshToken = await GenerateRefreshToken(verifyRefreshToken.id);
+      const getUser = await refreshTokenModel.getUser(verifyRefreshToken.id);
+
+      if (!getUser)
+        throw new ErrorHandler(400, "Erro ao buscar os dados do refresh token!");
+
+      const tokenJwt = generateToken({
+        id: getUser.id,
+        email: getUser.email,
+        role: "admin",
+      });
+      const validateRefreshTokenUser =
+        await refreshTokenModel.validateRefreshTokenUser(refreshToken);
+
+      if (!validateRefreshTokenUser)
+        throw new ErrorHandler(401, "Refresh token inválido!");
+
+      const refreshTokenUpdate = await refreshTokenModel.updateRefreshToken(
+        generateRefreshToken,
+        getUser.id
+      );
+
+      if (!refreshTokenUpdate)
         throw new ErrorHandler(400, "Erro ao salvar o refresh token!");
 
       res.status(200).json({
@@ -104,52 +157,17 @@ class AuthController {
     }
   }
 
-  async refreshTokenUser(req: Request, res: Response, next: NextFunction) {
-    const refreshAuth = req.headers.authorization;
-    const refreshTokenModel = new RefreshTokenModel();
-
-    const verifyRefreshToken = await verifyAndClearRefreshToken(refreshAuth);
-    if (!verifyRefreshToken) throw new ErrorHandler(401, "Refresh token inválido!");
-
-    const generateRefreshToken = await GenerateRefreshToken(verifyRefreshToken.id);
-    const getUser = await refreshTokenModel.getUser(verifyRefreshToken.id);
-
-    if (!getUser)
-      throw new ErrorHandler(400, "Erro ao buscar os dados do refresh token!");
-
-    const tokenJwt = generateToken({
-      id: getUser.id,
-      email: getUser.email,
-      role: "admin",
-    });
-    console.log(generateRefreshToken);
-    const refreshToken = await refreshTokenModel.updateRefreshToken(
-      generateRefreshToken,
-      getUser.id
-    );
-
-    if (!refreshToken)
-      throw new ErrorHandler(400, "Erro ao salvar o refresh token!");
-
-    res.status(200).json({
-      status: 200,
-      error: false,
-      data: { accessToken: tokenJwt, refreshToken: generateRefreshToken },
-    });
-  }
-
   async logoutUser(req: Request, res: Response, next: NextFunction) {
-    const refreshAuth = req.headers.authorization;
-    const tokenClear = refreshAuth?.split("Bearer ")[1];
-    const refreshToken = await verifyAndClearRefreshToken(refreshAuth);
-    const refreshTokenModel = new RefreshTokenModel();
-
     try {
-      const logoutUser = await refreshTokenModel.logoutUser(
-        tokenClear!,
-        refreshToken.id
+      const refreshAuth = req.headers.authorization;
+      const tokenClear = refreshAuth?.split("Bearer ")[1];
+      const refreshTokenModel = new RefreshTokenModel();
+
+      const logoutUserAuthenticated = await refreshTokenModel.logoutUser(
+        tokenClear!
       );
-      if (logoutUser.count <= 0)
+
+      if (logoutUserAuthenticated.count <= 0)
         throw new ErrorHandler(401, "Refresh token inválido ou já deslogado!");
 
       res.status(200).json({

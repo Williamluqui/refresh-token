@@ -2,16 +2,15 @@ import { prisma } from "../database/database";
 
 export class RefreshTokenModel {
   async getUser(userId: string) {
-    const refreshToken = await prisma.user.findFirst({
+    return await prisma.user.findFirst({
       where: {
         id: userId,
       },
     });
-    return refreshToken;
   }
 
   async saveRefreshToken(refreshToken: string, userId: string) {
-    const userRefreshToken = await prisma.refreshToken.create({
+    return await prisma.refreshToken.create({
       data: {
         refreshToken,
         user: {
@@ -21,12 +20,10 @@ export class RefreshTokenModel {
         },
       },
     });
-
-    return userRefreshToken;
   }
 
   async updateRefreshToken(refreshToken: string, userId: string) {
-    const update = await prisma.refreshToken.update({
+    return await prisma.refreshToken.update({
       where: {
         userId: userId,
       },
@@ -34,18 +31,28 @@ export class RefreshTokenModel {
         refreshToken,
       },
     });
-    return update;
   }
 
-  async logoutUser(refreshToken: string, userId: string) {
-    const updateUser = await prisma.refreshToken.deleteMany({
+  async validateRefreshTokenUser(refreshToken: string) {
+    return await prisma.refreshToken.findFirst({
       where: {
-        userId,
-        AND: {
-          refreshToken,
-        },
+        refreshToken,
       },
     });
-    return updateUser;
+  }
+
+  async logoutUser(refreshToken: string) {
+    return await prisma.refreshToken.deleteMany({
+      where: {
+        refreshToken,
+      },
+    });
+  }
+  async deleteRefreshTokenUserLogged(userId: string) {
+    return await prisma.refreshToken.deleteMany({
+      where: {
+        userId,
+      },
+    });
   }
 }
